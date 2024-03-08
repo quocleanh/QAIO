@@ -15,7 +15,7 @@ const COLORS = {
   Pink: '#FFC0CB',
   Black: '#000000',
   Primary_Opacity: 'rgba(152,27,30,0.7)',
-
+  Primary_Light_Opacity: 'rgba(152,27,30,0.3)',
   Transparent: 'transparent', 
   White_Opacity: 'rgba(255,255,255,0.7)',
   Black_Opacity: 'rgba(0,0,0,0.5)',
