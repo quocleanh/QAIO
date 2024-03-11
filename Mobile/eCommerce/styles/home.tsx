@@ -55,6 +55,11 @@ const home = StyleSheet.create({
     flex: 1,
     borderRadius: 10,
   },
+   bannerItem: {
+    borderRadius: 30,
+    width: Dimensions.get('screen').width - 20,
+    //backgroundColor: COLORS.White,
+},
   category: {
     backgroundColor: COLORS.White,
     marginTop: 0,
@@ -109,6 +114,7 @@ const home = StyleSheet.create({
     paddingHorizontal: 10,
     minHeight: 200,
     flex: 1,
+
     width: (Dimensions.get('screen').width - 20) / 2,  
   },
 
