@@ -1,21 +1,22 @@
 
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, Dimensions, SectionList } from 'react-native';
 import { Image } from 'react-native-elements';
 import { FlatList } from 'react-native-gesture-handler';
 import { ImageBackground } from 'react-native';
 import style from '../../styles/home';
 import { ImageBackgroundBase } from 'react-native';
 import COLORS from '../../consts/colors';
+import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 interface FlashSaleProps {
-     
+
 }
-const FlashSaleComponent = ({ navigation }: { navigation: any }) => {  
-    
+const FlashSaleComponent = ({ navigation }: { navigation: any }) => {
+
     const listFlashsales = [];
-    listFlashsales.push({ Name: ' ', Price: 923000, Discount: 20, Image: 'https://lzd-img-global.slatic.net/g/p/f2c9bf5d673e40d526219f2bdcfd6b4e.png_228x228q80.png_.webp', Desc: 'Trợ Giá 50.000₫' });
-    listFlashsales.push({ Name: ' ', Price: 858000, Discount: 28, Image: 'https://lzd-img-global.slatic.net/g/ff/kf/Sdbb3ecf0f827487e989c4c554b9fa07fJ.jpg_228x228q80.jpg_.webp', Desc: 'Giảm 10% khi mua 2 sản phẩm' });
-    listFlashsales.push({ Name: ' ', Price: 285000, Discount: 29, Image: 'https://lzd-img-global.slatic.net/g/p/59e6b1155a2081e20909f796b23d4990.png_228x228q80.png_.webp', Desc: 'Trợ Giá 44.000₫' });
+    listFlashsales.push({ ID: 1, Name: ' ', Price: 923000, Discount: 20, Image: 'https://www.vietceramics.com/media/4444162/460x400-1.jpg?quality=85', Desc: 'Trợ Giá 50.000₫' });
+    listFlashsales.push({ ID: 3, Name: ' ', Price: 858000, Discount: 28, Image: 'https://www.vietceramics.com/media/4444163/460x400-4.jpg?quality=85', Desc: 'Giảm 10% khi mua 2 sản phẩm' });
+    listFlashsales.push({ ID: 2, Name: ' ', Price: 285000, Discount: 29, Image: 'https://www.vietceramics.com/media/4444164/460x400-2.jpg?quality=85', Desc: 'Trợ Giá 44.000₫' });
     //listFlashsales.push({ Name: ' ', Price: 516000, Discount: 17, Image: 'https://lzd-img-global.slatic.net/g/p/dd902c670c0925559ec3b92baa7c87b0.jpg_228x228q80.jpg_.webp', Desc: 'Trợ Giá 24.000₫' });
 
 
@@ -33,13 +34,17 @@ const FlashSaleComponent = ({ navigation }: { navigation: any }) => {
                         <Text style={style.countdown_item}>59</Text>
                     </View>
                 </View>
-                <TouchableOpacity>
-                    <Text style={{ color: COLORS.Primary, lineHeight: 30 }}>Xem thêm</Text>
-                </TouchableOpacity>
+                <TouchableOpacity style={{   flexDirection: 'row' }}>
+                        <Text style={{ color: COLORS.Primary }}>
+                            Xem thêm
+                        </Text><MaterialIcon name="chevron-right" size={20} style={{}} color={COLORS.Primary} />
+                    </TouchableOpacity>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 5, backgroundColor: COLORS.White, alignContent: 'space-around' }}>
-                <FlatList 
-                    nestedScrollEnabled
+                
+
+                <FlatList  
+                nestedScrollEnabled={true}
                     data={listFlashsales}
                     numColumns={3}
                     keyExtractor={(item, index) => index.toString()}
@@ -89,5 +94,5 @@ const FlashSaleComponent = ({ navigation }: { navigation: any }) => {
         </View>
 
     );
-} 
+}
 export default FlashSaleComponent;

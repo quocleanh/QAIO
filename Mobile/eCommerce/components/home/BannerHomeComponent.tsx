@@ -7,18 +7,18 @@ import style from '../../styles/home';
 
 const BannerHomeComponent = ({ navigation }: { navigation: any }) => {
     const listCasual = [];
-    listCasual.push({ Name: '', Image: `https://lzd-img-global.slatic.net/g/ot/homepage/fd4a1297755d97f6073ec4ff39ea6ba9.jpeg_760x760q80.jpg_.webp` });
-    listCasual.push({ Name: '', Image: `https://lzd-img-global.slatic.net/g/ot/homepage/71286ba31f645d748e327b9e00f2f1af.jpeg_760x760q80.jpg_.webp` });
-    listCasual.push({ Name: '', Image: `https://lzd-img-global.slatic.net/us/lazgcp/3d563bae-70a1-41b2-b6a3-16beba8a8b11_VN-1125-345.png_760x760q80.png_.webp` });
+    listCasual.push({ Name: '', Image: `https://vn-test-11.slatic.net/shop/1bd337b687b0f7f0f423af89ec58bc59.png` });
+    listCasual.push({ Name: '', Image: `https://vn-test-11.slatic.net/shop/15640e14af10bd0eadecc7ce4c084b9f.png` });
+    listCasual.push({ Name: '', Image: `https://vn-test-11.slatic.net/shop/c13f8c16e7421fd5fad90204fa4aaa87.png` });
 
     return (
 
         <View style={style.banner}>
             <View style={{ flexDirection: 'column' }}>
-                <Carousel
-                    nestedScrollEnabled
+                <Carousel 
+                    nestedScrollEnabled={true}
                     layout={"default"}
-                    data={listCasual}
+                    data={listCasual} 
                     sliderWidth={Dimensions.get('screen').width}
                     itemWidth={Dimensions.get('screen').width - 20}
                     renderItem={({ item, index }) => {

@@ -16,6 +16,13 @@ const home = StyleSheet.create({
     paddingVertical: 5,
     height: 50,
     alignItems: 'center',
+    // shadow
+    shadowColor: COLORS.Black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84, 
+    elevation: 5,
+    
   },
   scan_icon: {
     width: 30,

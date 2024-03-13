@@ -1,36 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, SafeAreaView, StatusBar, View } from 'react-native';
 
-import { Text } from 'react-native-elements';
-import { Image } from '@rneui/themed';
-import COLORS from './consts/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-
 // Import your screens here
-import HomeScreen from './screens/HomeScreen';
-import LiveScreen from './screens/LiveScreen';
-import DetailScreen from './screens/DetailScreen';
+import HomeScreen from '.././screens/HomeScreen';
+import { Text } from 'react-native-elements';
+import { Image } from '@rneui/themed';
+import COLORS from '.././consts/colors';
 
 
 //import icon
-const homeActive = require('./assets/icon/home-active.png');
-const home = require('./assets/icon/home.png');
-const liveActive = require('./assets/icon/live-active.png');
-const live = require('./assets/icon/live.png');
-const messageActive = require('./assets/icon/message-active.png');
-const message = require('./assets/icon/message.png');
-const cartActive = require('./assets/icon/cart-active.png');
-const cart = require('./assets/icon/cart.png');
-const accountActive = require('./assets/icon/account-active.png');
-const account = require('./assets/icon/account.png');
+const homeActive = require('../assets/icon/home-active.png');
+const home = require('../assets/icon/home.png');
+const liveActive = require('../assets/icon/live-active.png');
+const live = require('../assets/icon/live.png');
+const messageActive = require('../assets/icon/message-active.png');
+const message = require('../assets/icon/message.png');
+const cartActive = require('../assets/icon/cart-active.png');
+const cart = require('../assets/icon/cart.png');
+const accountActive = require('../assets/icon/account-active.png');
+const account = require('../assets/icon/account.png');
 
 // Create the application stack
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-const App = () => {
+const _FooterComponent = () => {
   const [usersData, setUsersData] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -66,10 +63,10 @@ const App = () => {
             </View>
           ),
         }} />
-        <Tab.Screen name="Live" component={LiveScreen} options={{
+        <Tab.Screen name="Like" component={HomeScreen} options={{
           tabBarIcon: ({ focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' ,}}>
-              <View style={{ flex: 1,  flexDirection: 'column', alignContent: 'center', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ flex: 1, flexDirection: 'column', alignContent: 'center', justifyContent: 'center', alignItems: 'center' }}>
                 <Image source={focused ? liveActive : live} style={{ width: 25, height: 25 }} />
                 <Text style={{ color: focused ? COLORS.Primary : COLORS.Secondary }}>Live</Text>
               </View>
@@ -131,11 +128,9 @@ const App = () => {
       <Stack.Navigator initialRouteName={!isLoggedIn ? 'HomeTabs' : 'Login'}
         screenOptions={{ headerShown: false, headerTransparent: true }}>
         <Stack.Screen name="HomeTabs" component={HomeTabs} />
-        <Stack.Screen name="Detail" component={DetailScreen} />
-
       </Stack.Navigator>
     </NavigationContainer> 
   );
 };
 
-export default App;
+export default _FooterComponent;

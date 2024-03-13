@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
-import { Image } from 'react-native-elements';
 import { FlatList } from 'react-native-gesture-handler';
-import { ImageBackground } from 'react-native';
+import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import style from '../../styles/home';
-import { ImageBackgroundBase } from 'react-native';
 import COLORS from '../../consts/colors';
+import { color } from 'react-native-elements/dist/helpers';
 
 interface VouchersStationProps {
-    
-   
+
+
 }
 const VouchersStationComponent = ({ navigation }: { navigation: any }) => {
 
@@ -24,14 +24,16 @@ const VouchersStationComponent = ({ navigation }: { navigation: any }) => {
         <View style={{ backgroundColor: COLORS.Red }}>
             <View style={style.vouchers} >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 5, backgroundColor: COLORS.White, alignContent: 'space-around' }} >
-                    <Text style={{ fontSize: 17, fontWeight: 'bold' }}>Trạm Voucher</Text>
-                    <TouchableOpacity>
-                        <Text style={{ color: COLORS.Primary }}>Xem thêm</Text>
+                    <Text style={{ fontSize: 17, fontWeight: 'bold' }}>Trạm Voucher </Text>
+                    <TouchableOpacity style={{   flexDirection: 'row' }}>
+                        <Text style={{ color: COLORS.Primary }}>
+                            Xem thêm
+                        </Text><MaterialIcon name="chevron-right" size={20} style={{}} color={COLORS.Primary} />
                     </TouchableOpacity>
                 </View>
                 <View style={{ flex: 1, flexDirection: 'row', }}>
                     <FlatList
-                        nestedScrollEnabled
+                        nestedScrollEnabled={true}
                         data={listVouchers}
                         numColumns={2}
                         keyExtractor={(item, index) => index.toString()}
