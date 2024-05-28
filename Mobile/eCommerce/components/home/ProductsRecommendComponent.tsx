@@ -76,6 +76,7 @@ const ProductsRecommendComponent = ({ navigation }: { navigation: any }) => {
                 data={productsRecommend}
                 numColumns={2}
                 nestedScrollEnabled={true}
+                scrollEnabled={false}
                 contentContainerStyle={{
                     backgroundColor: COLORS.Light,
                     flexDirection: 'column', flex: 1, padding: 0
@@ -93,7 +94,7 @@ const ProductsRecommendComponent = ({ navigation }: { navigation: any }) => {
                         width: Dimensions.get("screen").width / 2 - 10,
                         position: 'relative',
                     }}>
-                        <TouchableOpacity onPress={() => navigation.navigate('Detail', { Product: item })}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Detail', { Product: item.Code })}>
                             <Image source={{ uri: item.PresentImage }} style={{ width: '100%', height: 200, borderRadius: 5 }} />
                             <View style={{ padding: 5 }}>
                                 {item.tags ? (

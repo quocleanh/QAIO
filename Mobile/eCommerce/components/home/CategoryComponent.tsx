@@ -21,26 +21,9 @@ const CategoryComponent = ({ navigation }: { navigation: any }) => {
     return (
         <View style={style.category}>
             <View style={{ paddingHorizontal: 10 }}>
-
-              
-                <ScrollView
-                nestedScrollEnabled={true}
-                    horizontal
-                    showsVerticalScrollIndicator={false}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingVertical: 20, alignContent: 'center' }}>
-                    {listCategories.map((item: {Id : number; Image: any; Name: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; }, index: any) => (
-                        <View key={item.Id} style={{ justifyContent: 'center', height: 80, width: 80, margin: 'auto' }}>
-                            <Image source={{ uri: item.Image }}
-                                style={{ width: 70, height: 70, margin: 'auto' }} />
-                            <Text numberOfLines={2}
-                                style={{ textAlign: 'center', fontSize: 12, padding: 5 }}>{item.Name}</Text>
-                        </View>
-                    ))}
-
-                </ScrollView>
-
-            </View>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.Black }}>Danh sách sản phâm</Text>
+                               
+            </View> 
         </View>
 
     );

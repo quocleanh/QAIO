@@ -25,6 +25,7 @@ const DetailScreen: React.FC = () => {
   Product.Description = 'Đá Granite là loại đá tự nhiên được hình thành từ núi lửa <br/> Độ cứng 7, độ dày 2cm <br/>  Bề mặt bóng đẹp, chống trầy xước '
   Product.Price = 1000000;
   Product.SalePrice = 700000;
+  Product.Code = ''
   //const refRBSheetVariable = React.createRef() || null;
   const refRBSheetVariable = useRef<RBSheet>(null);
   const refRBSheetProductContent = useRef<RBSheet>(null);
@@ -32,9 +33,9 @@ const DetailScreen: React.FC = () => {
   const [totalImages, setTotalImages] = useState<number>(1);
   const [currentImage, setCurrentImage] = useState<number>(1); 
    
-  Product.Images.push('http://static.superstones.com.vn/products-test/hinh-gach/' + Product.Code + '.jpg');
-  Product.Images.push('http://static.superstones.com.vn/products-test/hinh-gach/' + Product.Code + '.jpg');
-  Product.Images.push('http://static.superstones.com.vn/products-test/hinh-gach/' + Product.Code + '.jpg');
+  Product.Images.push('https://www.vietceramics.com/media/2662391/smlaa60-hinhshare.jpg');
+  Product.Images.push('https://www.vietceramics.com/media/2662393/smlaa60-thumbnail.jpg');
+  Product.Images.push('https://www.vietceramics.com/media/2662393/smlaa60-thumbnail.jpg');
 
   const navigation = useNavigation();
 

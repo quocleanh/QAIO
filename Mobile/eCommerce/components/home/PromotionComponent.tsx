@@ -31,7 +31,8 @@ const PromotionComponent = ({ navigation }: { navigation: any }) => {
             >
                 <View style={{ marginTop: 35, paddingHorizontal: 10 }}>
                     <FlatList
-                        nestedScrollEnabled={true}
+                    nestedScrollEnabled={true}
+                    scrollEnabled={false}
                         data={listPromoHero}
                         numColumns={3}
                         keyExtractor={(item, index) => index.toString()}

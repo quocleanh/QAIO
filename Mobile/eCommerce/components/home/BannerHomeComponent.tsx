@@ -1,4 +1,5 @@
 import Carousel from 'react-native-snap-carousel';
+ 
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { Image } from 'react-native-elements';
@@ -17,6 +18,7 @@ const BannerHomeComponent = ({ navigation }: { navigation: any }) => {
             <View style={{ flexDirection: 'column' }}>
                 <Carousel 
                     nestedScrollEnabled={true}
+                    scrollEnabled={false}
                     layout={"default"}
                     data={listCasual} 
                     sliderWidth={Dimensions.get('screen').width}

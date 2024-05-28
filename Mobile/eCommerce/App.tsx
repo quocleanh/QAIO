@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, SafeAreaView, StatusBar, View } from 'react-native';
+import { LogBox } from "react-native";
 
 import { Text } from 'react-native-elements';
 import { Image } from '@rneui/themed';
@@ -13,7 +14,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from './screens/HomeScreen';
 import LiveScreen from './screens/LiveScreen';
 import DetailScreen from './screens/DetailScreen';
-
+import WelcomeScreen from './screens/WelcomeScreen';
 
 //import icon
 const homeActive = require('./assets/icon/home-active.png');
@@ -68,8 +69,8 @@ const App = () => {
         }} />
         <Tab.Screen name="Live" component={LiveScreen} options={{
           tabBarIcon: ({ focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' ,}}>
-              <View style={{ flex: 1,  flexDirection: 'column', alignContent: 'center', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ alignItems: 'center', justifyContent: 'center', }}>
+              <View style={{ flex: 1, flexDirection: 'column', alignContent: 'center', justifyContent: 'center', alignItems: 'center' }}>
                 <Image source={focused ? liveActive : live} style={{ width: 25, height: 25 }} />
                 <Text style={{ color: focused ? COLORS.Primary : COLORS.Secondary }}>Live</Text>
               </View>
@@ -82,7 +83,7 @@ const App = () => {
               <View style={{ flex: 1, flexDirection: 'column', alignContent: 'center', justifyContent: 'center', alignItems: 'center' }}>
                 <Image source={focused ? messageActive : message} style={{ width: 25, height: 25 }} />
                 <Text style={{ color: focused ? COLORS.Primary : COLORS.Secondary }}>Tin nhắn</Text>
-                <Text style={{ fontSize: 9, color: COLORS.White, position: 'absolute', elevation: 1, top: 5, right: 5, backgroundColor: COLORS.Primary, borderRadius: 50, paddingVertical: 2, paddingHorizontal: 5 , fontWeight: '700'}}>99+</Text>
+                <Text style={{ fontSize: 9, color: COLORS.White, position: 'absolute', elevation: 1, top: 5, right: 5, backgroundColor: COLORS.Primary, borderRadius: 50, paddingVertical: 2, paddingHorizontal: 5, fontWeight: '700' }}>99+</Text>
               </View>
             </View>
           ),
@@ -93,8 +94,8 @@ const App = () => {
               <View style={{ position: 'relative', flex: 1, flexDirection: 'column', alignContent: 'center', justifyContent: 'center', alignItems: 'center' }}>
                 <Image source={focused ? cartActive : cart} style={{ width: 25, height: 25 }} />
                 <Text style={{ color: focused ? COLORS.Primary : COLORS.Secondary }}>Giỏ hàng</Text>
-                  <Text style={{ fontSize: 9, color: COLORS.White, position: 'absolute', elevation: 1, top: 5, right: 5, backgroundColor: COLORS.Primary, borderRadius: 50, paddingVertical: 2, paddingHorizontal: 5 , fontWeight: '700'}}>99+</Text>
-             
+                <Text style={{ fontSize: 9, color: COLORS.White, position: 'absolute', elevation: 1, top: 5, right: 5, backgroundColor: COLORS.Primary, borderRadius: 50, paddingVertical: 2, paddingHorizontal: 5, fontWeight: '700' }}>99+</Text>
+
               </View>
             </View>
           ),
@@ -111,7 +112,7 @@ const App = () => {
         }} />
       </Tab.Navigator>
     );
-  } 
+  }
   useEffect(() => {
     const fetchUserData = async () => {
       const userData = await AsyncStorage.getItem('userData');
@@ -125,16 +126,25 @@ const App = () => {
 
     fetchUserData();
   }, []);
+  LogBox.ignoreLogs([
+    "ViewPropTypes will be removed",
+    "ColorPropType will be removed",
+  ])
   return (
-
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={!isLoggedIn ? 'HomeTabs' : 'Login'}
-        screenOptions={{ headerShown: false, headerTransparent: true }}>
-        <Stack.Screen name="HomeTabs" component={HomeTabs} />
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Detail" component={DetailScreen} />
-
       </Stack.Navigator>
-    </NavigationContainer> 
+    </NavigationContainer>
+    // <NavigationContainer>
+    //   <Stack.Navigator initialRouteName={!isLoggedIn ? 'Home' : 'HomeTabs'}
+    //     screenOptions={{ headerShown: false, headerTransparent: true }}>
+    //     <Stack.Screen name="HomeTabs" component={HomeTabs} />
+    //     <Stack.Screen name="Detail" component={DetailScreen} /> 
+    //     <Stack.Screen name="Welcome" component={WelcomeScreen} />
+    //   </Stack.Navigator>
+    // </NavigationContainer> 
   );
 };
 

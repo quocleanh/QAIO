@@ -13,10 +13,9 @@ import CategoryComponent from '../components/home/CategoryComponent';
 import ProductsRecommendComponent from '../components/home/ProductsRecommendComponent';
 import PromotionComponent from '../components/home/PromotionComponent';
 
-
-import FooterComponent from '../components/_FooterComponent';
 import HeaderComponent from '../components/_HeaderComponent';
-const HomeScreen = ({ navigation }: { navigation: any }) => {
+
+const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const [refreshing, setRefreshing] = React.useState(false);
 
     const onRefresh = React.useCallback(() => {
@@ -45,16 +44,6 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 <FlashSaleComponent navigation={navigation} />
                 <ProductsRecommendComponent navigation={navigation} />
             </ScrollView>
-            {/* <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-                    <BannerHomeComponent navigation={navigation} />
-                    <CategoryComponent navigation={navigation} />
-                    <PromotionComponent navigation={navigation} />
-                    <VouchersStationComponent navigation={navigation} />
-                    <FlashSaleComponent navigation={navigation} />
-                    <ProductsRecommendComponent navigation={navigation} />
-                </ScrollView>  */}
-
-
         </SafeAreaView>
     );
 };

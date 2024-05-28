@@ -44,7 +44,9 @@ const FlashSaleComponent = ({ navigation }: { navigation: any }) => {
                 
 
                 <FlatList  
-                nestedScrollEnabled={true}
+               
+               nestedScrollEnabled={true}
+               scrollEnabled={false}
                     data={listFlashsales}
                     numColumns={3}
                     keyExtractor={(item, index) => index.toString()}

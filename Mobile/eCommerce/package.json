@@ -20,6 +20,7 @@
     "@react-navigation/stack": "^6.3.21",
     "@rneui/themed": "^4.0.0-rc.8",
     "@types/react-native-snap-carousel": "^3.8.11",
+    "deprecated-react-native-prop-types": "^2.3.0",
     "react": "18.2.0",
     "react-native": "0.73.3",
     "react-native-elements": "^3.4.3",
@@ -29,6 +30,7 @@
     "react-native-safe-area-context": "^4.9.0",
     "react-native-screens": "^3.29.0",
     "react-native-snap-carousel": "^3.9.1",
+    "react-native-splash-screen": "^3.3.0",
     "react-native-tab-view": "^3.5.2",
     "react-native-vector-icons": "^10.0.3"
   },

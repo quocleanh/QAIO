@@ -1,3 +1,0 @@
-package sharedpkg
-
-// Util functions

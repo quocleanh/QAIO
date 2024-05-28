@@ -33,7 +33,8 @@ const VouchersStationComponent = ({ navigation }: { navigation: any }) => {
                 </View>
                 <View style={{ flex: 1, flexDirection: 'row', }}>
                     <FlatList
-                        nestedScrollEnabled={true}
+                    nestedScrollEnabled={true}
+                    scrollEnabled={false}
                         data={listVouchers}
                         numColumns={2}
                         keyExtractor={(item, index) => index.toString()}

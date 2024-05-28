@@ -1,4 +1,10 @@
 {
   "name": "eCommerce",
-  "displayName": "eCommerce"
+  "displayName": "eCommerce",
+  "splash": {
+    "image": "./assets/splash.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#981b1e",
+    "show": false   
+  }
 }
