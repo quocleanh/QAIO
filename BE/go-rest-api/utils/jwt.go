@@ -2,12 +2,14 @@ package utils
 
 import (
 	"context"
+	"go-rest-api/models"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Định nghĩa khóa context
@@ -54,11 +56,60 @@ func GetEmailFromContext(ctx context.Context) string {
 	return ctx.Value(userContextKey).(string)
 }
 
-// Tạo JWT
-func GenerateJWT(email string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": email,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(),
-	})
-	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+func GenerateTokens(user models.User) (string, string, error) {
+	// Define the access token claims
+	accessTokenClaims := jwt.MapClaims{
+		"sub":     user.ID,
+		"email":   user.Email,
+		"name":    user.Name,
+		"phone":   user.Phone,
+		"address": user.Address,
+		"status":  user.Status,
+		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Token expires in 1 day
+	}
+	accessToken, err := generateToken(accessTokenClaims)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Define the refresh token claims
+	refreshTokenClaims := jwt.MapClaims{
+		"sub": user.ID,
+		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(), // Token expires in 7 days
+	}
+	refreshToken, err := generateToken(refreshTokenClaims)
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
 }
+
+// generateToken generates a JWT token with the given claims
+func generateToken(claims jwt.Claims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		return "", err
+	}
+	return signedToken, nil
+}
+
+// Hàm lưu RefreshToken vào cơ sở dữ liệu
+func SaveTokens(userID primitive.ObjectID, refreshToken, accessToken string) error {
+	// Thực hiện lưu RefreshToken và AccessToken vào cơ sở dữ liệu
+
+	return nil
+}
+
+// // Tạo JWT
+// func GenerateJWT(email string, days int) (string, error) {
+// 	// Tạo một token mới với các claim
+// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+// 		"email": email,
+// 		"exp":   time.Now().Add(time.Duration(days) * 24 * time.Hour).Unix(), // Thời gian hết hạn của token
+// 	})
+
+// 	// Ký và mã hóa token bằng JWT_SECRET
+// 	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+// }
