@@ -202,6 +202,16 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	filePath := "email_templates/welcome_email.html"
 	// Đọc và thay thế nội dung HTML
 	htmlContent, err := utils.HTMLFileContent(filePath)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+
 	activeLink := "/kich-hoat-tai-khoan/"
 
 	htmlContent = strings.Replace(htmlContent, "*|Name|*", user.Name, -1)
@@ -211,16 +221,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	emailSubject := "Đăng ký tài khoản"
 	emailBody := htmlContent
 
-	err = utils.SendMail(user.Email, emailSubject, emailBody)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"msg":     err,
-			"msg_key": "_EMAIL_SEND_FAILURE_",
-			"status":  http.StatusInternalServerError,
-		})
-		return
-	}
+	go utils.SendMail(user.Email, emailSubject, emailBody)
 
 	// Thành công
 	w.WriteHeader(http.StatusCreated)
@@ -245,12 +246,32 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user models.User
-	err := usersCollection.FindOne(context.Background(), bson.M{"email": creds.Email}).Decode(&user)
+	err := usersCollection.FindOne(
+		context.Background(),
+		bson.M{"email": creds.Email}).Decode(&user)
+
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"msg":     "Invalid email or password",
 			"msg_key": "_INVALID_CREDENTIALS_",
+			"status":  http.StatusUnauthorized,
+		})
+		return
+	}
+	if user.Status == "InActive" {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     "Account is inactive",
+			"msg_key": "_ACCOUNT_INACTIVE_",
+			"status":  http.StatusUnauthorized,
+		})
+		return
+	} else if user.Status == "Blocked" {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     "Account is blocked",
+			"msg_key": "_ACCOUNT_BLOCKED_",
 			"status":  http.StatusUnauthorized,
 		})
 		return
@@ -268,10 +289,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_accessToken, _refreshToken, err := utils.GenerateTokens(user)
-
-	user.RefreshToken = _refreshToken
-	user.AccessToken = _accessToken
-	user.Password = ""
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -281,7 +298,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	user.RefreshToken = _refreshToken
+	user.AccessToken = _accessToken
 
+	//Luu 2 cái token củ lol đó vô DB
+	err = SaveTokens(user.ID, _accessToken, _refreshToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"data": models.User{
 			ID:           user.ID,
@@ -289,14 +319,74 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Name:         user.Name,
 			Phone:        user.Phone,
 			Avatar:       user.Avatar,
+			Address:      user.Address,
 			AccessToken:  user.AccessToken,
 			RefreshToken: user.RefreshToken,
 			ReferrerCode: user.ReferrerCode,
 			Status:       user.Status,
+			DoB:          user.DoB,
 			Role:         user.Role,
 		},
 		"msg":     "LOGIN_SUCCESS",
 		"msg_key": "_LOGIN_SUCCESS_",
+		"status":  http.StatusOK,
+	})
+}
+func RefreshToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json") // Thiết lập Content-Type là JSON
+
+	// Lấy USERid từ context (được thiết lập bởi middleware)
+	userIDString := utils.GetUserIDFromContext(r.Context())
+	// Tìm người dùng trong MongoDB
+	var user models.User
+	userID, err := primitive.ObjectIDFromHex(userIDString)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	err = usersCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     err.Error(),
+			"msg_key": "_NOT_FOUND_USER_",
+			"status":  http.StatusOK,
+		})
+		return
+	}
+	//Tạo token nếu khớp thông tin
+	_accessToken, _refreshToken, err := utils.GenerateTokens(user)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	//luu token lor
+	err = SaveTokens(user.ID, _accessToken, _refreshToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": map[string]string{
+			"accessToken": user.AccessToken,
+		},
+		"msg":     "SUCCESS",
+		"msg_key": "_SUCCESS_",
 		"status":  http.StatusOK,
 	})
 }

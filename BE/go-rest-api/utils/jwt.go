@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"go-rest-api/models"
 	"net/http"
 	"os"
@@ -15,15 +16,20 @@ import (
 // Định nghĩa khóa context
 type contextKey string
 
-const userContextKey = contextKey("email")
+const userContextKey = contextKey("sub")
 
 // Middleware JWT để kiểm tra token
-func JWTMiddleware(next http.Handler) http.Handler {
+func JWTMiddleware(next http.Handler, IsCheckExpired bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Lấy token từ header Authorization
 		tokenHeader := r.Header.Get("Authorization")
 		if tokenHeader == "" {
-			http.Error(w, "Thiếu token xác thực", http.StatusForbidden)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"msg":     "_INVALID_TOKEN_",
+				"msg_key": "_INVALID_TOKEN_",
+				"status":  http.StatusUnauthorized,
+			})
 			return
 		}
 
@@ -34,25 +40,48 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Token không hợp lệ", http.StatusForbidden)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"msg":     err.Error(),
+				"msg_key": "_INVALID_TOKEN_",
+				"status":  http.StatusUnauthorized,
+			})
 			return
 		}
 
 		// Trích xuất email từ claims
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok || !token.Valid {
-			http.Error(w, "Token không hợp lệ", http.StatusForbidden)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"msg":     err.Error(),
+				"msg_key": "_INVALID_TOKEN_",
+				"status":  http.StatusUnauthorized,
+			})
 			return
 		}
+		if IsCheckExpired {
+			tokenExp := time.Unix(int64(claims["exp"].(float64)), 0)
+			currentTime := time.Now()
+			if !tokenExp.After(currentTime) {
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"msg":     "_EXPIED_TOKEN_",
+					"msg_key": "_EXPIED_TOKEN_",
+					"status":  http.StatusUnauthorized,
+				})
+			}
 
-		email := claims["email"].(string)
-		ctx := context.WithValue(r.Context(), userContextKey, email)
+		}
+
+		userID := claims["sub"].(string)
+		ctx := context.WithValue(r.Context(), userContextKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 // Lấy email từ context
-func GetEmailFromContext(ctx context.Context) string {
+func GetUserIDFromContext(ctx context.Context) string {
 	return ctx.Value(userContextKey).(string)
 }
 
@@ -101,15 +130,3 @@ func SaveTokens(userID primitive.ObjectID, refreshToken, accessToken string) err
 
 	return nil
 }
-
-// // Tạo JWT
-// func GenerateJWT(email string, days int) (string, error) {
-// 	// Tạo một token mới với các claim
-// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-// 		"email": email,
-// 		"exp":   time.Now().Add(time.Duration(days) * 24 * time.Hour).Unix(), // Thời gian hết hạn của token
-// 	})
-
-// 	// Ký và mã hóa token bằng JWT_SECRET
-// 	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-// }
