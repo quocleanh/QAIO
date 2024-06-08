@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -289,8 +290,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	_accessToken, _refreshToken, err := utils.GenerateTokens(user)
+	isRefresh := false
+	_accessToken, _refreshToken, err := utils.GenerateTokens(user, isRefresh)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -334,58 +335,67 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"status":  http.StatusOK,
 	})
 }
-func RefreshToken(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json") // Thiết lập Content-Type là JSON
+func RefreshToken(c *gin.Context) {
+	c.Header("Content-Type", "application/json") // Thiết lập Content-Type là JSON
 
 	// Lấy USERid từ context (được thiết lập bởi middleware)
-	userIDString := utils.GetUserIDFromContext(r.Context())
+	userIDString, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     "USERid not found in context",
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+
 	// Tìm người dùng trong MongoDB
 	var user models.User
-	userID, err := primitive.ObjectIDFromHex(userIDString)
+	userID, err := primitive.ObjectIDFromHex(userIDString.(string))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
 		})
 		return
 	}
+
 	err = usersCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusOK, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_NOT_FOUND_USER_",
 			"status":  http.StatusOK,
 		})
 		return
 	}
-	//Tạo token nếu khớp thông tin
-	_accessToken, _refreshToken, err := utils.GenerateTokens(user)
+	isRefresh := true
+	// Tạo token nếu khớp thông tin
+	accessToken, refreshToken, err := utils.GenerateTokens(user, isRefresh)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
 		})
 		return
 	}
-	//luu token lor
-	err = SaveTokens(user.ID, _accessToken, _refreshToken)
+
+	// Lưu token mới
+	err = SaveTokens(user.ID, accessToken, refreshToken)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
 		})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+
+	c.JSON(http.StatusOK, gin.H{
 		"data": map[string]string{
-			"accessToken": user.AccessToken,
+			"accessToken": accessToken,
 		},
 		"msg":     "SUCCESS",
 		"msg_key": "_SUCCESS_",
