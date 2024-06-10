@@ -36,6 +36,7 @@ func JWTMiddleware(handler gin.HandlerFunc) gin.HandlerFunc {
 }
 func isValidToken(c *gin.Context, tokenHeader string) bool {
 	// Kiểm tra token header
+
 	if tokenHeader == "" {
 		log.Println("Invalid token: empty token header")
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -63,7 +64,7 @@ func isValidToken(c *gin.Context, tokenHeader string) bool {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
-
+	log.Println(os.Getenv("JWT_SECRET"))
 	if err != nil || !token.Valid {
 		log.Printf("Invalid token: %v\n", err)
 		c.JSON(http.StatusUnauthorized, gin.H{

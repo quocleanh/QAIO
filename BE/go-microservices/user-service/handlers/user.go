@@ -59,7 +59,7 @@ func GetUser(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"data": models.User{
 			ID:           user.ID,
 			Email:        user.Email,
@@ -74,8 +74,8 @@ func GetUser(c *gin.Context) {
 			DoB:          user.DoB,
 			Role:         user.Role,
 		},
-		"msg":     "LOGIN_SUCCESS",
-		"msg_key": "_LOGIN_SUCCESS_",
+		"msg":     "SUCCESS",
+		"msg_key": "_SUCCESS_",
 		"status":  http.StatusOK,
 	})
 }
