@@ -10,6 +10,6 @@ import (
 // Đăng ký các route
 func RegisterRoutes(router *gin.Engine) {
 
-	router.GET("/api/user", utils.JWTMiddleware(handlers.GetUser, true))
+	router.GET("/api/user", utils.JWTMiddleware(handlers.GetUser))
 
 }

@@ -43,6 +43,9 @@ func main() {
 	// Khởi tạo usersCollection
 	handlers.InitUsersCollection(client)
 
+	// Khởi tạo productsCollection
+	handlers.InitUProductCollection(client)
+
 	// Cấu hình router
 	router := mux.NewRouter()
 	routes.RegisterRoutes(router)

@@ -19,14 +19,14 @@ type contextKey string
 const userContextKey = contextKey("sub")
 
 // Middleware JWT để kiểm tra token
-func JWTMiddleware(handler gin.HandlerFunc, checkExpiry bool) gin.HandlerFunc {
+func JWTMiddleware(handler gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Kiểm tra JWT ở đây
 		// Ví dụ: kiểm tra token từ header và validate nó
 		tokenString := c.GetHeader("Authorization")
 
 		// Thực hiện kiểm tra token ở đây (bỏ qua code thực tế)
-		if isValidToken(c, tokenString, checkExpiry) {
+		if isValidToken(c, tokenString) {
 			handler(c)
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -34,7 +34,7 @@ func JWTMiddleware(handler gin.HandlerFunc, checkExpiry bool) gin.HandlerFunc {
 		}
 	}
 }
-func isValidToken(c *gin.Context, tokenHeader string, checkExpiry bool) bool {
+func isValidToken(c *gin.Context, tokenHeader string) bool {
 	// Kiểm tra token header
 	if tokenHeader == "" {
 		log.Println("Invalid token: empty token header")
@@ -86,19 +86,17 @@ func isValidToken(c *gin.Context, tokenHeader string, checkExpiry bool) bool {
 		return false
 	}
 
-	// Kiểm tra thời hạn của token nếu cần
-	if checkExpiry {
-		tokenExp := time.Unix(int64(claims["exp"].(float64)), 0)
-		currentTime := time.Now()
-		if !tokenExp.After(currentTime) {
-			log.Println("Invalid token: token has expired")
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"msg":     "_EXPIRED_TOKEN_",
-				"msg_key": "_EXPIRED_TOKEN_",
-				"status":  http.StatusUnauthorized,
-			})
-			return false
-		}
+	// Kiểm tra thời hạn của token
+	tokenExp := time.Unix(int64(claims["exp"].(float64)), 0)
+	currentTime := time.Now()
+	if !tokenExp.After(currentTime) {
+		log.Println("Invalid token: token has expired")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"msg":     "_EXPIRED_TOKEN_",
+			"msg_key": "_EXPIRED_TOKEN_",
+			"status":  http.StatusUnauthorized,
+		})
+		return false
 	}
 
 	// Lấy userID từ claims
@@ -114,7 +112,7 @@ func isValidToken(c *gin.Context, tokenHeader string, checkExpiry bool) bool {
 func GetUserIDFromContext(ctx context.Context) string {
 	return ctx.Value(userContextKey).(string)
 }
-func GenerateTokens(user models.User, isRefresh bool) (string, string, error) {
+func GenerateTokens(user models.User) (string, string, error) {
 	var accessToken string
 	var refreshToken string
 	var err error
@@ -133,28 +131,20 @@ func GenerateTokens(user models.User, isRefresh bool) (string, string, error) {
 		logError("Error generating access token: " + err.Error())
 		return "", "", err
 	}
-	// Nếu refresh token, tạo access token mới, ko tạo refresh
-	if isRefresh {
-
-		refreshToken = user.RefreshToken
-
-	} else {
-		// Định nghĩa các claims cho refresh token
-		refreshTokenClaims := jwt.MapClaims{
-			"sub":     user.ID,
-			"iat":     time.Now().Unix(),
-			"email":   user.Email,
-			"name":    user.Name,
-			"phone":   user.Phone,
-			"address": user.Address,
-			"status":  user.Status,
-			"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(), // Token expires in 7 days
-		}
-		refreshToken, err = generateToken(refreshTokenClaims)
-		if err != nil {
-			logError("Error generating refresh token: " + err.Error())
-			return "", "", err
-		}
+	refreshTokenClaims := jwt.MapClaims{
+		"sub":     user.ID,
+		"iat":     time.Now().Unix(),
+		"email":   user.Email,
+		"name":    user.Name,
+		"phone":   user.Phone,
+		"address": user.Address,
+		"status":  user.Status,
+		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(), // Token expires in 7 days
+	}
+	refreshToken, err = generateToken(refreshTokenClaims)
+	if err != nil {
+		logError("Error generating refresh token: " + err.Error())
+		return "", "", err
 	}
 
 	return accessToken, refreshToken, nil
