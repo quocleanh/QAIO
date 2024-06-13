@@ -113,9 +113,13 @@ func isValidToken(c *gin.Context, tokenHeader string) bool {
 func GetUserIDFromContext(ctx context.Context) string {
 	return ctx.Value(userContextKey).(string)
 }
-func GenerateTokens(user models.User) (string, string, error) {
-	var accessToken string
-	var refreshToken string
+
+// GenerateTokens generates a JWT access token for the given user with the specified expiration time.
+// It takes a user model and the number of hours until the token expires as input parameters.
+// The function returns the generated token as a string and an error if any occurred.
+func GenerateTokens(user models.User, expiredHours int) (string, error) {
+	var _token string
+
 	var err error
 	accessTokenClaims := jwt.MapClaims{
 		"sub":     user.ID,
@@ -125,30 +129,16 @@ func GenerateTokens(user models.User) (string, string, error) {
 		"phone":   user.Phone,
 		"address": user.Address,
 		"status":  user.Status,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Token expires in 1 day
-	}
-	accessToken, err = generateToken(accessTokenClaims)
-	if err != nil {
-		logError("Error generating access token: " + err.Error())
-		return "", "", err
-	}
-	refreshTokenClaims := jwt.MapClaims{
-		"sub":     user.ID,
-		"iat":     time.Now().Unix(),
-		"email":   user.Email,
-		"name":    user.Name,
-		"phone":   user.Phone,
-		"address": user.Address,
-		"status":  user.Status,
-		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(), // Token expires in 7 days
-	}
-	refreshToken, err = generateToken(refreshTokenClaims)
-	if err != nil {
-		logError("Error generating refresh token: " + err.Error())
-		return "", "", err
+		"exp":     time.Now().Add(time.Hour * time.Duration(expiredHours)).Unix(),
 	}
 
-	return accessToken, refreshToken, nil
+	_token, err = generateToken(accessTokenClaims)
+	if err != nil {
+		logError("Error generating access token: " + err.Error())
+		return "", err
+	}
+
+	return _token, nil
 }
 
 func logError(message string) {

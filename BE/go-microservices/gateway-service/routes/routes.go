@@ -20,6 +20,5 @@ func proxyHandler(target string) http.HandlerFunc {
 }
 
 func SetupRoutes() {
-	http.HandleFunc("/auth/", proxyHandler("http://localhost:8081/"))
-	http.HandleFunc("/user/", proxyHandler("http://localhost:8082/"))
+	http.HandleFunc("/user/", proxyHandler("http://localhost:8081/"))
 }

@@ -50,7 +50,7 @@ func main() {
 	// Cấu hình và chạy server
 	srv := &http.Server{
 		Handler:      router,
-		Addr:         "0.0.0.0:8082",
+		Addr:         "0.0.0.0:8081",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
