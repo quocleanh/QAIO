@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"go-rest-api/handlers"
-	"go-rest-api/routes"
-	"go-rest-api/utils"
 	"log"
 	"net/http"
 	"os"
-	"time"
+	"time" 
+	"product-service/handlers"
+	"product-service/routes"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -39,23 +38,9 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("Đã kết nối tới MongoDB!")
+
 	// Khởi tạo usersCollection
-	// SQL Server connection setup
-	db, err := utils.ConnectSQLServer()
-    if err != nil {
-        log.Fatal("Cannot connect to database:", err)
-    }
-    defer db.Close()
-
-    log.Println("Connected to database successfully")
-	// Khoi tao productCollection
-	handlers.InitProductCollection(db)
-
-	// Kiểm tra kết nối
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
+	handlers.InitProductsCollection(client)
 
 	// Cấu hình router
 	router := gin.Default()
@@ -64,7 +49,7 @@ func main() {
 	// Cấu hình và chạy server
 	srv := &http.Server{
 		Handler:      router,
-		Addr:         "0.0.0.0:8081",
+		Addr:         "0.0.0.0:8082",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}

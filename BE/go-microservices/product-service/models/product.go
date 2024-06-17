@@ -1,16 +1,16 @@
 package models
-
 import "time"
 
+// Product represents the structure of a product in the database
 type Product struct {
-	ID                    int       `bson:"id"`
 	No                    string    `bson:"no"`
 	Name                  string    `bson:"name"`
 	ManufacturerCode      string    `bson:"manufacturer_code"`
 	CountryPurchasedCode  string    `bson:"country_purchased_code"`
+	CountryName           string    `bson:"country_name"`
 	Class                 string    `bson:"class"`
 	SubGroupCode2         string    `bson:"sub_group_code_2"`
-	ColorCode             string    `bson:"color_code"`
+	ColorName             string    `bson:"color_name"`
 	SurfaceName           string    `bson:"surface_name"`
 	ItemGroup2            string    `bson:"item_group_2"`
 	Width                 float64   `bson:"width"`
@@ -22,14 +22,22 @@ type Product struct {
 	ProductTypeLevel3Desc string    `bson:"product_type_level_3_description"`
 	Overflow              string    `bson:"overflow"`
 	TapHole               string    `bson:"tap_hole"`
+	TapHoleWithDrain      string    `bson:"tap_hole_with_drain"`
 	Smart                 string    `bson:"smart"`
 	WallDrainage          string    `bson:"wall_drainage"`
 	FloorDrainage         string    `bson:"floor_drainage"`
+	ProductGroupName      string    `bson:"product_group_name"`
+	StyleName             string    `bson:"style_name"`
+	Color                 string    `bson:"color"`
+	Surface               string    `bson:"surface"`
+	InstallationType      string    `bson:"installation_type"`
 	Depth                 float64   `bson:"depth"`
 	Height                float64   `bson:"height"`
 	Diameter              float64   `bson:"diameter"`
 	BathFeets             string    `bson:"bath_feets"`
 	Shape                 string    `bson:"shape"`
+	Image                 []string  `bson:"image"`
+	Price                 []Price   `bson:"price"`
 	CreatedAt             time.Time `bson:"created_at"`
 	UpdatedAt             time.Time `bson:"updated_at"`
 }

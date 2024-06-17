@@ -2,15 +2,15 @@ package utils
 
 import (
 	"context"
-	"encoding/json"
 	"go-rest-api/models"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/gin-gonic/gin"
 )
 
 // Định nghĩa khóa context
@@ -19,65 +19,94 @@ type contextKey string
 const userContextKey = contextKey("sub")
 
 // Middleware JWT để kiểm tra token
-func JWTMiddleware(next http.Handler, IsCheckExpired bool) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Lấy token từ header Authorization
-		tokenHeader := r.Header.Get("Authorization")
-		if tokenHeader == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"msg":     "_INVALID_TOKEN_",
-				"msg_key": "_INVALID_TOKEN_",
-				"status":  http.StatusUnauthorized,
-			})
-			return
-		}
+func JWTMiddleware(handler gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Kiểm tra JWT ở đây
+		// Ví dụ: kiểm tra token từ header và validate nó
+		tokenString := c.GetHeader("Authorization")
 
-		// Tách token khỏi chuỗi Bearer
-		tokenString := strings.Split(tokenHeader, "Bearer ")[1]
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte(os.Getenv("JWT_SECRET")), nil
+		// Thực hiện kiểm tra token ở đây (bỏ qua code thực tế)
+		if isValidToken(c, tokenString) {
+			handler(c)
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+		}
+	}
+}
+func isValidToken(c *gin.Context, tokenHeader string) bool {
+	// Kiểm tra token header
+
+	if tokenHeader == "" {
+		log.Println("Invalid token: empty token header")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"msg":     "_INVALID_TOKEN_",
+			"msg_key": "_INVALID_TOKEN_",
+			"status":  http.StatusUnauthorized,
 		})
+		return false
+	}
 
-		if err != nil || !token.Valid {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"msg":     err.Error(),
-				"msg_key": "_INVALID_TOKEN_",
-				"status":  http.StatusUnauthorized,
-			})
-			return
-		}
+	// Tách token khỏi chuỗi Bearer
+	tokenParts := strings.Split(tokenHeader, "Bearer ")
+	if len(tokenParts) != 2 {
+		log.Println("Invalid token: malformed token header")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"msg":     "_INVALID_TOKEN_",
+			"msg_key": "_INVALID_TOKEN_",
+			"status":  http.StatusUnauthorized,
+		})
+		return false
+	}
+	tokenString := tokenParts[1]
 
-		// Trích xuất email từ claims
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || !token.Valid {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"msg":     err.Error(),
-				"msg_key": "_INVALID_TOKEN_",
-				"status":  http.StatusUnauthorized,
-			})
-			return
-		}
-		if IsCheckExpired {
-			tokenExp := time.Unix(int64(claims["exp"].(float64)), 0)
-			currentTime := time.Now()
-			if !tokenExp.After(currentTime) {
-				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"msg":     "_EXPIED_TOKEN_",
-					"msg_key": "_EXPIED_TOKEN_",
-					"status":  http.StatusUnauthorized,
-				})
-			}
-
-		}
-
-		userID := claims["sub"].(string)
-		ctx := context.WithValue(r.Context(), userContextKey, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
+	// Parse token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
+	log.Println(os.Getenv("JWT_SECRET"))
+	if err != nil || !token.Valid {
+		log.Printf("Invalid token: %v\n", err)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INVALID_TOKEN_",
+			"status":  http.StatusUnauthorized,
+		})
+		return false
+	}
+
+	// Trích xuất claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		log.Println("Invalid token: unable to extract claims")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"msg":     "_INVALID_TOKEN_",
+			"msg_key": "_INVALID_TOKEN_",
+			"status":  http.StatusUnauthorized,
+		})
+		return false
+	}
+
+	// Kiểm tra thời hạn của token
+	tokenExp := time.Unix(int64(claims["exp"].(float64)), 0)
+	currentTime := time.Now()
+	if !tokenExp.After(currentTime) {
+		log.Println("Invalid token: token has expired")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"msg":     "_EXPIRED_TOKEN_",
+			"msg_key": "_EXPIRED_TOKEN_",
+			"status":  http.StatusUnauthorized,
+		})
+		return false
+	}
+
+	// Lấy userID từ claims
+	userID := claims["sub"].(string)
+
+	// Thiết lập userID vào context
+	c.Set("userID", userID)
+
+	return true
 }
 
 // Lấy email từ context
@@ -85,33 +114,36 @@ func GetUserIDFromContext(ctx context.Context) string {
 	return ctx.Value(userContextKey).(string)
 }
 
-func GenerateTokens(user models.User) (string, string, error) {
-	// Define the access token claims
+// GenerateTokens generates a JWT access token for the given user with the specified expiration time.
+// It takes a user model and the number of hours until the token expires as input parameters.
+// The function returns the generated token as a string and an error if any occurred.
+func GenerateTokens(user models.User, expiredHours int) (string, error) {
+	var _token string
+
+	var err error
 	accessTokenClaims := jwt.MapClaims{
 		"sub":     user.ID,
+		"iat":     time.Now().Unix(),
 		"email":   user.Email,
 		"name":    user.Name,
 		"phone":   user.Phone,
 		"address": user.Address,
 		"status":  user.Status,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Token expires in 1 day
-	}
-	accessToken, err := generateToken(accessTokenClaims)
-	if err != nil {
-		return "", "", err
+		"exp":     time.Now().Add(time.Hour * time.Duration(expiredHours)).Unix(),
 	}
 
-	// Define the refresh token claims
-	refreshTokenClaims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(), // Token expires in 7 days
-	}
-	refreshToken, err := generateToken(refreshTokenClaims)
+	_token, err = generateToken(accessTokenClaims)
 	if err != nil {
-		return "", "", err
+		logError("Error generating access token: " + err.Error())
+		return "", err
 	}
 
-	return accessToken, refreshToken, nil
+	return _token, nil
+}
+
+func logError(message string) {
+	// Thay thế bằng cơ chế log của bạn, ví dụ logrus, zap, hoặc đơn giản là log chuẩn của Go
+	log.Println("ERROR: " + message)
 }
 
 // generateToken generates a JWT token with the given claims
@@ -122,11 +154,4 @@ func generateToken(claims jwt.Claims) (string, error) {
 		return "", err
 	}
 	return signedToken, nil
-}
-
-// Hàm lưu RefreshToken vào cơ sở dữ liệu
-func SaveTokens(userID primitive.ObjectID, refreshToken, accessToken string) error {
-	// Thực hiện lưu RefreshToken và AccessToken vào cơ sở dữ liệu
-
-	return nil
 }

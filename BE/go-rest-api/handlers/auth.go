@@ -2,14 +2,20 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"go-rest-api/models"
 	"go-rest-api/utils"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"unicode"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -80,12 +86,20 @@ func isValidPassword(password string) bool {
 	return hasUpper && hasLower && hasDigit
 }
 
-func SignUp(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json") // Thiết lập Content-Type là JSON
+// Tạo token ngẫu nhiên
+func generateToken() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+func SignUp(c *gin.Context) {
+
+	c.Header("Content-Type", "application/json") // Thiết lập Content-Type là JSON
 	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewDecoder(c.Request.Body).Decode(&user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid input",
 			"msg_key": "_INVALID_INPUT_",
 			"status":  http.StatusBadRequest,
@@ -95,8 +109,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Kiểm tra các trường bắt buộc
 	if user.Email == "" || user.Password == "" || user.Phone == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Email, Password, and Phone are required",
 			"msg_key": "_REQUIRED_FIELDS_MISSING_",
 			"status":  http.StatusBadRequest,
@@ -106,8 +119,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Kiểm tra định dạng email
 	if !isValidEmail(user.Email) {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid email format",
 			"msg_key": "_INVALID_EMAIL_FORMAT_",
 			"status":  http.StatusBadRequest,
@@ -118,8 +130,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	// Kiểm tra xem email đã tồn tại chưa
 	exists, err := emailExists(user.Email)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid phone number format",
 			"msg_key": "_INVALID_PHONE_FORMAT_",
 			"status":  http.StatusBadRequest,
@@ -127,9 +138,8 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		// Trường hợp email đã tồn tại
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "EMAIL_ALREADY_EXISTS",
 			"msg_key": "_EMAIL_ALREADY_EXISTS_",
 			"status":  http.StatusConflict,
@@ -138,8 +148,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	// Kiểm tra định dạng số điện thoại
 	if !isValidPhone(user.Phone) {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid phone number format",
 			"msg_key": "_INVALID_PHONE_FORMAT_",
 			"status":  http.StatusBadRequest,
@@ -149,19 +158,17 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Kiểm tra mật khẩu
 	if !isValidPassword(user.Password) {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid password format. Password must be at least 6 characters long, contain at least 1 uppercase letter, 1 number, and 1 character [a-Z]",
 			"msg_key": "_INVALID_PASSWORD_FORMAT_",
 			"status":  http.StatusBadRequest,
 		})
 		return
 	}
-
+	// Mã hóa mật khẩu trước khi lưu vào cơ sở dữ liệu
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
@@ -187,24 +194,31 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		"refreshToken": "",
 		"accessToken":  "",
 	}
-
+	// Thêm người dùng mới vào cơ sở dữ liệu
 	_, err = usersCollection.InsertOne(context.Background(), userData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
 		})
 		return
 	}
-
+	//Đọc file HTML
 	filePath := "email_templates/welcome_email.html"
-	// Đọc và thay thế nội dung HTML
+	//Đọc và thay thế nội dung HTML
 	htmlContent, err := utils.HTMLFileContent(filePath)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	randToken, err := generateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
@@ -212,32 +226,29 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activeLink := "/kich-hoat-tai-khoan/"
-
+	activeLink := "/kich-hoat-tai-khoan?token=" + randToken
 	htmlContent = strings.Replace(htmlContent, "*|Name|*", user.Name, -1)
 	htmlContent = strings.Replace(htmlContent, "*|activeLink|*", activeLink, -1)
 
 	// Gửi email xác nhận đăng ký tài khoản
-	emailSubject := "Đăng ký tài khoản"
+	emailSubject := fmt.Sprintf("%s %s", os.Getenv("product_name"), "Account registration confirmation")
 	emailBody := htmlContent
 
 	go utils.SendMail(user.Email, emailSubject, emailBody)
 
 	// Thành công
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"msg":     "REGISTER_SUCCESS",
 		"msg_key": "_REGISTER_SUCCESS_",
 		"status":  http.StatusCreated,
 	})
 }
 
-func Login(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json") // Thiết lập Content-Type là JSON
+func Login(c *gin.Context) {
+	c.Header("Content-Type", "application/json") // Thiết lập Content-Type là JSON
 	var creds models.User
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewDecoder(c.Request.Body).Decode(&creds); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid input",
 			"msg_key": "_INVALID_INPUT_",
 			"status":  http.StatusBadRequest,
@@ -251,8 +262,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		bson.M{"email": creds.Email}).Decode(&user)
 
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid email or password",
 			"msg_key": "_INVALID_CREDENTIALS_",
 			"status":  http.StatusUnauthorized,
@@ -260,16 +270,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user.Status == "InActive" {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Account is inactive",
 			"msg_key": "_ACCOUNT_INACTIVE_",
 			"status":  http.StatusUnauthorized,
 		})
 		return
 	} else if user.Status == "Blocked" {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Account is blocked",
 			"msg_key": "_ACCOUNT_BLOCKED_",
 			"status":  http.StatusUnauthorized,
@@ -279,19 +287,25 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(creds.Password))
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     "Invalid email or password",
 			"msg_key": "_INVALID_CREDENTIALS_",
 			"status":  http.StatusUnauthorized,
 		})
 		return
 	}
-
-	_accessToken, _refreshToken, err := utils.GenerateTokens(user)
+	_refreshToken, err := utils.GenerateTokens(user, 24*7) // 7 ngày
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	_accessToken, err := utils.GenerateTokens(user, 24) // 1 ngày
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
@@ -300,19 +314,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	user.RefreshToken = _refreshToken
 	user.AccessToken = _accessToken
-
-	//Luu 2 cái token củ lol đó vô DB
-	err = SaveTokens(user.ID, _accessToken, _refreshToken)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"msg":     err.Error(),
-			"msg_key": "_INTERNAL_SERVER_ERROR_",
-			"status":  http.StatusInternalServerError,
-		})
-		return
-	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	c.JSON(http.StatusInternalServerError, gin.H{
 		"data": models.User{
 			ID:           user.ID,
 			Email:        user.Email,
@@ -332,77 +334,179 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"status":  http.StatusOK,
 	})
 }
-func RefreshToken(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json") // Thiết lập Content-Type là JSON
-
+func RefreshToken(c *gin.Context) {
+	c.Header("Content-Type", "application/json") // Thiết lập Content-Type là JSON
 	// Lấy USERid từ context (được thiết lập bởi middleware)
-	userIDString := utils.GetUserIDFromContext(r.Context())
+	userIDString, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     "USERid not found in context",
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+
 	// Tìm người dùng trong MongoDB
 	var user models.User
-	userID, err := primitive.ObjectIDFromHex(userIDString)
+	userID, err := primitive.ObjectIDFromHex(userIDString.(string))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
 		})
 		return
 	}
+
 	err = usersCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusOK, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_NOT_FOUND_USER_",
 			"status":  http.StatusOK,
 		})
 		return
 	}
-	//Tạo token nếu khớp thông tin
-	_accessToken, _refreshToken, err := utils.GenerateTokens(user)
+	// Tạo token nếu khớp thông tin
+	accessToken, err := utils.GenerateTokens(user, 24)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"msg":     err.Error(),
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
 			"status":  http.StatusInternalServerError,
 		})
 		return
 	}
-	//luu token lor
-	err = SaveTokens(user.ID, _accessToken, _refreshToken)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"msg":     err.Error(),
-			"msg_key": "_INTERNAL_SERVER_ERROR_",
-			"status":  http.StatusInternalServerError,
-		})
-		return
-	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+
+	c.JSON(http.StatusOK, gin.H{
 		"data": map[string]string{
-			"accessToken": user.AccessToken,
+			"accessToken": accessToken, // Trả về token mới
 		},
 		"msg":     "SUCCESS",
 		"msg_key": "_SUCCESS_",
 		"status":  http.StatusOK,
 	})
 }
+func ForgetPassword(c *gin.Context) {
+	c.Header("Content-Type", "application/json") // Thiết lập Content-Type là JSON
+	var creds models.User
 
-// Hàm lưu RefreshToken vào cơ sở dữ liệu
-func SaveTokens(userID primitive.ObjectID, refreshToken, accessToken string) error {
-	// Thực hiện lưu RefreshToken và AccessToken vào cơ sở dữ liệu
-	_, err := usersCollection.UpdateOne(
+	if err := json.NewDecoder(c.Request.Body).Decode(&creds); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     "Invalid input",
+			"msg_key": "_INVALID_INPUT_",
+			"status":  http.StatusBadRequest,
+		})
+		return
+	}
+
+	var user models.User
+	err := usersCollection.FindOne(
 		context.Background(),
-		bson.M{"_id": userID},
-		bson.M{
-			"$set": bson.M{
-				"refreshToken": refreshToken,
-				"accessToken":  accessToken,
-			},
-		},
+		bson.M{"email": creds.Email},
+	).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// Trường hợp không tìm thấy tài liệu nào khớp với điều kiện
+			c.JSON(http.StatusNotFound, gin.H{
+				"msg":     "User not found",
+				"msg_key": "_USER_NOT_FOUND_",
+				"status":  http.StatusNotFound,
+			})
+		} else {
+			// Trường hợp có lỗi khác xảy ra trong quá trình tìm kiếm
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"msg":     "Internal server error",
+				"msg_key": "_INTERNAL_SERVER_ERROR_",
+				"status":  http.StatusInternalServerError,
+			})
+		}
+		return
+	}
+
+	filePath := "email_templates/forget_password_email.html"
+	//Đọc và thay thế nội dung HTML
+	htmlContent, err := utils.HTMLFileContent(filePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	_accessToken, err := utils.GenerateTokens(user, 1)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	// Nếu xác thực thành công thì gửi mail cho user
+	activeLink := os.Getenv("BASE_URL") + "/kich-hoat-tai-khoan?token=" + _accessToken
+	htmlContent = strings.Replace(htmlContent, "*|forget_passlink|*", activeLink, -1)
+	// Gửi email xác nhận đăng ký tài khoản
+	emailSubject := fmt.Sprintf("%s %s", os.Getenv("product_name"), "Forget password confirmation")
+	emailBody := htmlContent
+
+	log.Println(htmlContent)
+	go utils.SendMail(user.Email, emailSubject, emailBody)
+	c.JSON(http.StatusOK, gin.H{
+		"msg":     "SUCCESS",
+		"msg_key": "_SUCCESS_",
+		"status":  http.StatusOK,
+	})
+}
+func ResetPassword(c *gin.Context) {
+	c.Header("Content-Type", "application/json") // Thiết lập Content-Type là JSON
+	var creds models.User
+	if err := json.NewDecoder(c.Request.Body).Decode(&creds); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     "Invalid input",
+			"msg_key": "_INVALID_INPUT_",
+			"status":  http.StatusBadRequest,
+		})
+		return
+	}
+	// Kiểm tra mật khẩu
+	if !isValidPassword(creds.Password) {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     "Invalid password format. Password must be at least 6 characters long, contain at least 1 uppercase letter, 1 number, and 1 character [a-Z]",
+			"msg_key": "_INVALID_PASSWORD_FORMAT_",
+			"status":  http.StatusBadRequest,
+		})
+		return
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	// Cập nhật mật khẩu mới vào cơ sở dữ liệu
+	_, err = usersCollection.UpdateOne(
+		context.Background(),
+		bson.M{"email": creds.Email},
+		bson.M{"$set": bson.M{"password": string(hashedPassword)}},
 	)
-	return err
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg":     err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  http.StatusInternalServerError,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"msg":     "SUCCESS",
+		"msg_key": "_SUCCESS_",
+		"status":  http.StatusOK,
+	})
+
 }
