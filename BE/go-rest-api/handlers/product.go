@@ -1,77 +1,72 @@
+// handlers/product.go
+
 package handlers
 
 import (
-	"database/sql"
-	"go-rest-api/models"
 	"net/http"
+	"strconv"
+
+	"go-rest-api/repositories"
 
 	"github.com/gin-gonic/gin"
 )
 
-var productscollection *sql.DB
-
-// InitUProductCollection initializes the product collection
-func InitProductCollection(client *sql.DB) {
-	productscollection = client
+type ProductHandler struct {
+	Repo *repositories.ProductRepository
 }
 
-// GetProducts retrieves all products
-func GetProducts(c *gin.Context) {
-	rows, err := productscollection.Query("SELECT TOP 100 i.No_ No, i.Class, i.[Content Marketing] Name FROM dbo.Item i WHERE i.[Content Marketing] IS NOT NULL AND i.[Content Marketing] <> ''")
+func NewProductHandler(repo *repositories.ProductRepository) *ProductHandler {
+	return &ProductHandler{
+		Repo: repo,
+	}
+}
+
+func (h *ProductHandler) GetProducts(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
+	pageIndexStr := c.Query("pageIndex")
+	pageSizeStr := c.Query("pageSize")
+
+	pageIndex, err := strconv.Atoi(pageIndexStr)
+	if err != nil {
+		pageIndex = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil {
+		pageSize = 100
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	products, err := h.Repo.GetProducts(pageIndex, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"msg":     err.Error(),
+			"message": "Internal Server Error",
 			"msg_key": "_INTERNAL_SERVER_ERROR_",
-			"status":  http.StatusInternalServerError,
+			"status":  "500",
 		})
 		return
 	}
-	defer rows.Close()
-	var products []models.Product
-	for rows.Next() {
-		var product models.Product
-		err := rows.Scan(
-			//&product.ID,
-			&product.No,
-			&product.Name,
-			// &product.ManufacturerCode,
-			// &product.CountryPurchasedCode,
-			&product.Class,
-			// &product.SubGroupCode2,
-			// &product.ColorCode,
-			// &product.SurfaceName,
-			// &product.ItemGroup2,
-			// &product.Width,
-			// &product.Length,
-			// &product.BaseUnitOfMeasure,
-			// &product.ProductTypeLevel2,
-			// &product.ProductTypeLevel2Desc,
-			// &product.ProductTypeLevel3,
-			// &product.ProductTypeLevel3Desc,
-			// &product.Overflow,
-			// &product.TapHole,
-			// &product.Smart,
-			// &product.WallDrainage,
-			// &product.FloorDrainage,
-			// &product.Depth,
-			// &product.Height,
-			// &product.Diameter,
-			// &product.BathFeets,
-			// &product.Shape,
-			// &product.CreatedAt,
-			// &product.UpdatedAt,
-		)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"msg":     err.Error(),
-				"msg_key": "_INTERNAL_SERVER_ERROR_",
-				"status":  http.StatusInternalServerError,
-			})
-			return
+	if products == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Success",
+			"msg_key": "_SUCCESS_",
+			"status":  "200",
+			"data":    nil,
+		})
+	} else {
+		productResponse := gin.H{
+			"products":     products,
+			"pageIndex":    pageIndex,
+			"pageSize":     pageSize,
+			"totalRecords": products[len(products)-1].TotalRecords,
 		}
-		products = append(products, product)
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Success",
+			"msg_key": "_SUCCESS_",
+			"status":  "200",
+			"data":    productResponse,
+		})
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"data": products,
-	})
+
 }

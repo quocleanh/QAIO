@@ -8,7 +8,7 @@ import (
 )
 
 // Đăng ký các route
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router *gin.Engine,productHandler *handlers.ProductHandler) {
 
 	// User Authentication and Authorization
 	router.POST("/api/signup", handlers.SignUp)
@@ -24,7 +24,7 @@ func RegisterRoutes(router *gin.Engine) {
 	router.POST("/api/forget-password", handlers.ForgetPassword)
 	router.POST("/api/reset-password", utils.JWTMiddleware(handlers.ResetPassword))
 
+	// Product Management 
+	router.GET("/api/products", productHandler.GetProducts)
 
-	// Product Management
-	router.GET("/api/products", handlers.GetProducts)
 }

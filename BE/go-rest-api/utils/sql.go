@@ -3,24 +3,22 @@ package utils
 import (
 	"database/sql"
 	"log"
-	"os"
 
 	_ "github.com/denisenkom/go-mssqldb" // Import driver cho SQL Server
 )
 
-func ConnectSQLServer() (*sql.DB, error) {
-	connString := os.Getenv("SQL_SERVER_URI")
-	log.Println("Connecting to SQL Server..")
-	db, err := sql.Open("sqlserver", connString)
-	if err != nil {
-		log.Fatal("Error creating connection pool: ", err)
-		return nil, err
-	}
-
-	err = db.Ping()
+// ConnectSQLServer thiết lập kết nối tới SQL Server và trả về đối tượng *sql.DB
+func ConnectSQLServer(uri string) (*sql.DB, error) {
+	db, err := sql.Open("sqlserver", uri)
 	if err != nil {
 		return nil, err
 	}
 
+	// Kiểm tra kết nối
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+
+	log.Println("Successfully connected to SQL Server")
 	return db, nil
 }

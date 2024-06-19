@@ -1,9 +1,12 @@
+// main.go
+
 package main
 
 import (
 	"context"
 	"fmt"
 	"go-rest-api/handlers"
+	"go-rest-api/repositories"
 	"go-rest-api/routes"
 	"go-rest-api/utils"
 	"log"
@@ -39,27 +42,29 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("Đã kết nối tới MongoDB!")
-	// Khởi tạo usersCollection
-	// SQL Server connection setup
-	db, err := utils.ConnectSQLServer()
-    if err != nil {
-        log.Fatal("Cannot connect to database:", err)
-    }
-    defer db.Close()
 
-    log.Println("Connected to database successfully")
-	// Khoi tao productCollection
-	handlers.InitProductCollection(db)
+	// Kết nối tới SQL Server
+	db, err := utils.ConnectSQLServer(os.Getenv("SQL_SERVER_URI"))
+	if err != nil {
+		log.Fatal("Cannot connect to database:", err)
+	}
+	defer db.Close()
 
-	// Kiểm tra kết nối
+	log.Println("Connected to database successfully")
+
+	// Kiểm tra kết nối SQL Server
 	err = db.Ping()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Tạo ProductRepository và ProductHandler
+	productRepo := repositories.NewProductRepository(db)
+	productHandler := handlers.NewProductHandler(productRepo)
+
 	// Cấu hình router
 	router := gin.Default()
-	routes.RegisterRoutes(router)
+	routes.RegisterRoutes(router, productHandler)
 
 	// Cấu hình và chạy server
 	srv := &http.Server{
