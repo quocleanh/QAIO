@@ -9,6 +9,7 @@ import (
 	"go-rest-api/repositories"
 	"go-rest-api/routes"
 	"go-rest-api/utils"
+	"go-rest-api/worker"
 	"log"
 	"net/http"
 	"os"
@@ -43,6 +44,10 @@ func main() {
 	}
 	fmt.Println("Đã kết nối tới MongoDB!")
 
+	// Khởi tạo Collection
+	handlers.InitUsersCollection(client)
+	handlers.InitProductsCollection(client)
+
 	// Kết nối tới SQL Server
 	db, err := utils.ConnectSQLServer(os.Getenv("SQL_SERVER_URI"))
 	if err != nil {
@@ -61,6 +66,10 @@ func main() {
 	// Tạo ProductRepository và ProductHandler
 	productRepo := repositories.NewProductRepository(db)
 	productHandler := handlers.NewProductHandler(productRepo)
+
+	// Khởi động worker để đồng bộ sản phẩm mỗi 24 giờ
+	productWorker := worker.ProductWorker(productRepo, client)
+	go productWorker.Run()
 
 	// Cấu hình router
 	router := gin.Default()

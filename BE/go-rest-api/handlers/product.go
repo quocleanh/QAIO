@@ -3,16 +3,41 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"go-rest-api/repositories"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type ProductHandler struct {
 	Repo *repositories.ProductRepository
+}
+
+var productsCollection *mongo.Collection
+
+// Khởi tạo InitProductsCollection và tạo chỉ mục unique cho email
+func InitProductsCollection(client *mongo.Client) {
+	productsCollection = client.Database("go_rest_api").Collection("products")
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{
+			"no": 1,
+		},
+		Options: options.Index().SetUnique(true),
+	}
+	//productsCollection.Indexes().CreateOne(context.Background(), indexModel)
+
+	_, err := productsCollection.Indexes().CreateOne(context.Background(), indexModel)
+	if err != nil {
+
+		return
+	}
+
 }
 
 func NewProductHandler(repo *repositories.ProductRepository) *ProductHandler {

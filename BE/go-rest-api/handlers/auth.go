@@ -1,12 +1,12 @@
 package handlers
 
-import (
+import ( 
+	"go-rest-api/models"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"go-rest-api/models"
 	"go-rest-api/utils"
 	"log"
 	"net/http"
