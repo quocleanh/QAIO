@@ -15,7 +15,8 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{
 		DB: db,
 	}
-} 
+}
+
 // The GetProducts method iterates over the rows returned by the query and scans the values into a Product struct
 func (repo *ProductRepository) GetProducts(pageIndex, pageSize int) ([]models.Product, error) {
 	query := `
@@ -64,7 +65,7 @@ func (repo *ProductRepository) GetProducts(pageIndex, pageSize int) ([]models.Pr
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var products []models.Product
 	for rows.Next() {
 		var product models.Product
@@ -110,4 +111,18 @@ func (repo *ProductRepository) GetProducts(pageIndex, pageSize int) ([]models.Pr
 		return nil, err
 	}
 	return products, nil
+}
+func (repo *ProductRepository) GetTotalRecords() (int, error) {
+	query := `
+	SELECT COUNT(*) AS TotalRecords
+	FROM dbo.Item i
+	WHERE i.[Content Marketing] IS NOT NULL
+		AND i.[Content Marketing] <> ''
+	`
+	var totalRecords int
+	err := repo.DB.QueryRow(query).Scan(&totalRecords)
+	if err != nil {
+		return 0, err
+	}
+	return totalRecords, nil
 }

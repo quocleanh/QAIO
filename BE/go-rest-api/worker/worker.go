@@ -2,14 +2,13 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"go-rest-api/repositories"
 	"log"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Worker struct {
@@ -42,41 +41,43 @@ func (w *Worker) Run() {
 
 func (w *Worker) syncProducts() {
 	log.Println("Starting product sync...")
-
-	// Lấy dữ liệu sản phẩm từ SQL
-	products, err := w.ProductRepo.GetProducts(1, 11)
+	totalRecords, err := w.ProductRepo.GetTotalRecords()
 	if err != nil {
-		log.Println("Error when getting products:", err)
+		log.Println("Error when getting total records:", err)
 		return
 	}
-
-	for _, product := range products {
-		// Bỏ qua sản phẩm nếu `No` bị null hoặc rỗng
-		if product.No == "" {
-			log.Println("Skipping product with null No:", product)
-			continue
-		}
-
-		filter := bson.M{"no": product.No}
-		update := bson.M{"$set": bson.M{"name": product.Name}}
-
-		// Chuyển đổi product sang JSON để log
-		productJSON, err := json.Marshal(product)
+	pageIndex := 1
+	pageSize := 100
+	for pageIndex <= totalRecords/pageSize+1 {
+		// Lấy dữ liệu sản phẩm từ SQL
+		products, err := w.ProductRepo.GetProducts(pageIndex, pageSize)
 		if err != nil {
-			log.Println("Error marshalling product to JSON:", err)
-			continue
+			log.Println("Error when getting products:", err)
+			return
+		}
+		for _, product := range products {
+			// Kiểm tra xem sản phẩm đã tồn tại trong MongoDB chưa
+			filter := bson.M{"no": product.No}
+			var existingProduct bson.M
+			err := w.MongoClient.Database("products").Collection("products").FindOne(context.Background(), filter).Decode(&existingProduct)
+			if err == mongo.ErrNoDocuments {
+				// Nếu sản phẩm chưa tồn tại thì thêm mới
+				_, err := w.MongoClient.Database(os.Getenv("MONGO_DB_NAME")).Collection("products").InsertOne(context.Background(), product)
+				if err != nil {
+					log.Println("Error when inserting product:", err)
+				}
+			} else if err != nil {
+				log.Println("Error when checking existing product:", err)
+			} else {
+				// Nếu sản phẩm đã tồn tại thì cập nhật
+				update := bson.M{"$set": product}
+				_, err := w.MongoClient.Database(os.Getenv("MONGO_DB_NAME")).Collection("products").UpdateOne(context.Background(), filter, update)
+				if err != nil {
+					log.Println("Error when updating product:", err)
+				}
+			}
 		}
 
-		// Log chi tiết sản phẩm dưới dạng JSON
-		log.Printf("Upserting product: %s\n", productJSON)
-
-		// Thực hiện upsert sản phẩm vào MongoDB, chỉ cập nhật trường "name"
-		_, err = w.MongoClient.Database("go_rest_api").Collection("products").UpdateOne(context.Background(), filter, update, options.Update().SetUpsert(true))
-		if err != nil {
-			log.Println("Error upserting product:", string(productJSON), err)
-			continue
-		}
+		log.Println("Product sync completed!")
 	}
-
-	log.Println("Product sync completed!")
 }
