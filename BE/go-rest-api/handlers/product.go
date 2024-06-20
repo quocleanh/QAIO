@@ -26,7 +26,7 @@ func InitProductsCollection(client *mongo.Client) {
 	productsCollection = client.Database("go_rest_api").Collection("products")
 	indexModel := mongo.IndexModel{
 		Keys: bson.M{
-			"no": 1,
+			"_id": 1,
 		},
 		Options: options.Index().SetUnique(true),
 	}

@@ -15,14 +15,13 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{
 		DB: db,
 	}
-}
-
+} 
+// The GetProducts method iterates over the rows returned by the query and scans the values into a Product struct
 func (repo *ProductRepository) GetProducts(pageIndex, pageSize int) ([]models.Product, error) {
 	query := `
 	SELECT *
 	FROM (
-		SELECT 
-			i.RowID AS ID,
+		SELECT  DISTINCT
 			i.No_ AS No,
 			i.Name,
 			ISNULL(i.[Manufacturer Code], '') AS ManufacturerCode,
@@ -65,12 +64,11 @@ func (repo *ProductRepository) GetProducts(pageIndex, pageSize int) ([]models.Pr
 		return nil, err
 	}
 	defer rows.Close()
-
+	
 	var products []models.Product
 	for rows.Next() {
 		var product models.Product
 		err := rows.Scan(
-			&product.ID,
 			&product.No,
 			&product.Name,
 			&product.ManufacturerCode,
