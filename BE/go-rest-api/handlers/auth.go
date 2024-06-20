@@ -1,12 +1,12 @@
 package handlers
 
-import ( 
-	"go-rest-api/models"
+import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"go-rest-api/models"
 	"go-rest-api/utils"
 	"log"
 	"net/http"
@@ -27,7 +27,7 @@ var usersCollection *mongo.Collection
 
 // Khởi tạo usersCollection và tạo chỉ mục unique cho email
 func InitUsersCollection(client *mongo.Client) {
-	usersCollection = client.Database("go_rest_api").Collection("users")
+	usersCollection = client.Database(os.Getenv("MONGO_DB_NAME")).Collection("users")
 	indexModel := mongo.IndexModel{
 		Keys: bson.M{
 			"email": 1,
