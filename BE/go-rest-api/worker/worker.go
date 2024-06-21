@@ -27,7 +27,7 @@ func ProductWorker(productRepo *repositories.ProductRepository, mongoClient *mon
 
 func (w *Worker) Run() {
 	// Chạy lần đồng bộ đầu tiên ngay lập tức
-	w.syncProducts()
+	//w.syncProducts()
 
 	// Sau đó tiếp tục 12:00 AM hàng ngày
 	for {
@@ -35,6 +35,7 @@ func (w *Worker) Run() {
 		nextMidnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, 1)
 		time.Sleep(nextMidnight.Sub(now))
 		w.syncProducts()
+
 	}
 
 }
@@ -83,4 +84,6 @@ func (w *Worker) syncProducts() {
 		}
 
 	}
+	log.Println("Product sync completed!")
+	log.Println("Next sync will be at 12:00 AM")
 }

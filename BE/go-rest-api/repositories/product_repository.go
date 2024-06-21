@@ -22,7 +22,6 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 func (repo *ProductRepository) GetProducts_SQL(pageIndex, pageSize int) ([]models.Product_SQL, error) {
 	query := `
 			SELECT  
-			A.ID,
 			A.No,
 			A.Name,
 			A.ManufacturerCode,
@@ -75,10 +74,10 @@ func (repo *ProductRepository) GetProducts_SQL(pageIndex, pageSize int) ([]model
 				ISNULL(i.[Product Type Level 2 Description], '') AS ProductTypeLevel2Desc,
 				ISNULL(i.[Product Type Level 3], '') AS ProductTypeLevel3,
 				ISNULL(i.[Product Type Level 3 Description], '') AS ProductTypeLevel3Desc,
-				i.[Content Marketing] 'ContentMarketing',
-				i.[Description Marketing] DescriptionMarketing,
-				i.[Content Marketing EN] ContentMarketingEn,
-				i.[Description Marketing EN] DescriptionMarketingEn,
+				ISNULL(i.[Content Marketing], '') AS  'ContentMarketing',
+				ISNULL(i.[Description Marketing], '') AS  DescriptionMarketing,
+				ISNULL(i.[Content Marketing EN] , '') AS ContentMarketingEn,
+				ISNULL(i.[Description Marketing EN] , '') AS DescriptionMarketingEn,
 				ISNULL(i.Overflow, 0) AS Overflow,
 				ISNULL(i.[Tap Hole], 0) AS TapHole,
 				ISNULL(i.Smart, 0) AS Smart,
@@ -128,6 +127,10 @@ func (repo *ProductRepository) GetProducts_SQL(pageIndex, pageSize int) ([]model
 			&product.ProductTypeLevel2Desc,
 			&product.ProductTypeLevel3,
 			&product.ProductTypeLevel3Desc,
+			&product.ContentMarketing,
+			&product.DescriptionMarketing,
+			&product.ContentMarketingEn,
+			&product.DescriptionMarketingEn,
 			&product.Overflow,
 			&product.TapHole,
 			&product.Smart,
