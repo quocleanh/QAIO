@@ -49,9 +49,11 @@ func main() {
 	handlers.InitProductsCollection(client)
 
 	// Kết nối tới SQL Server
+
 	db, err := utils.ConnectSQLServer(os.Getenv("SQL_SERVER_URI"))
 	if err != nil {
 		log.Fatal("Cannot connect to database:", err)
+
 	}
 	defer db.Close()
 
