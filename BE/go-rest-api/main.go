@@ -67,7 +67,9 @@ func main() {
 	productRepo := repositories.NewProductRepository(db)
 	productHandler := handlers.NewProductHandler(productRepo)
 
-	// Khởi động worker để đồng bộ sản phẩm mỗi 24 giờ
+	// Khởi động worker để đồng bộ sản phẩm
+
+	log.Println("Environment is development")
 	productWorker := worker.ProductWorker(productRepo, client)
 	go productWorker.Run()
 

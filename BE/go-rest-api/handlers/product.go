@@ -63,7 +63,8 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	if pageSize > 100 {
 		pageSize = 100
 	}
-	products, err := h.Repo.GetProducts(pageIndex, pageSize)
+	products, err := productsCollection.Find(context.Background(), bson.M{}, options.Find().SetSkip(int64((pageIndex-1)*pageSize)).SetLimit(int64(pageSize)))
+	//totalRecord := productsCollection.CountDocuments(context.Background(), bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Internal Server Error",
@@ -84,7 +85,7 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 			"products":     products,
 			"pageIndex":    pageIndex,
 			"pageSize":     pageSize,
-			"totalRecords": products[len(products)-1].TotalRecords,
+			"totalRecords": 0, //
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Success",
