@@ -5,6 +5,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"os"
 	"strconv"
 
 	"go-rest-api/repositories"
@@ -23,7 +24,7 @@ var productsCollection *mongo.Collection
 
 // Khởi tạo InitProductsCollection và tạo chỉ mục unique cho email
 func InitProductsCollection(client *mongo.Client) {
-	productsCollection = client.Database("go_rest_api").Collection("products")
+	productsCollection = client.Database(os.Getenv("MONGO_DB_NAME")).Collection("products")
 	indexModel := mongo.IndexModel{
 		Keys: bson.M{
 			"_id": 1,
@@ -40,31 +41,52 @@ func InitProductsCollection(client *mongo.Client) {
 
 }
 
-func NewProductHandler(repo *repositories.ProductRepository) *ProductHandler {
-	return &ProductHandler{
-		Repo: repo,
-	}
-}
-
-func (h *ProductHandler) GetProducts(c *gin.Context) {
+func GetProducts(c *gin.Context) {
 	c.Header("Content-Type", "application/json")
-	pageIndexStr := c.Query("pageIndex")
-	pageSizeStr := c.Query("pageSize")
 
-	pageIndex, err := strconv.Atoi(pageIndexStr)
-	if err != nil {
+	pageSizeStr := c.Query("take")
+	pageIndexStr := c.Query("skip")
+
+	pageIndex, err := strconv.ParseInt(pageIndexStr, 10, 64)
+	if err != nil || pageIndex < 1 {
 		pageIndex = 1
 	}
 
-	pageSize, err := strconv.Atoi(pageSizeStr)
+	pageSize, err := strconv.ParseInt(pageSizeStr, 10, 64)
+	if err != nil || pageSize <= 0 {
+		pageSize = 100
+	} else if pageSize > 100 {
+		pageSize = 100
+	}
+
+	skip := (pageIndex - 1) * pageSize
+
+	var products *mongo.Cursor
+	products, err = productsCollection.Find(context.Background(), bson.M{}, &options.FindOptions{
+		Skip:  &skip,
+		Limit: &pageSize,
+	})
 	if err != nil {
-		pageSize = 100
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  "500",
+		})
+		return
 	}
-	if pageSize > 100 {
-		pageSize = 100
+	defer products.Close(context.Background())
+
+	var productList []bson.M
+	if err = products.All(context.Background(), &productList); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+			"msg_key": "_INTERNAL_SERVER_ERROR_",
+			"status":  "500",
+		})
+		return
 	}
-	products, err := productsCollection.Find(context.Background(), bson.M{}, options.Find().SetSkip(int64((pageIndex-1)*pageSize)).SetLimit(int64(pageSize)))
-	//totalRecord := productsCollection.CountDocuments(context.Background(), bson.M{})
+
+	totalRecord, err := productsCollection.CountDocuments(context.Background(), bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Internal Server Error",
@@ -73,26 +95,18 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 		})
 		return
 	}
-	if products == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Success",
-			"msg_key": "_SUCCESS_",
-			"status":  "200",
-			"data":    nil,
-		})
-	} else {
-		productResponse := gin.H{
-			"products":     products,
-			"pageIndex":    pageIndex,
-			"pageSize":     pageSize,
-			"totalRecords": 0, //
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Success",
-			"msg_key": "_SUCCESS_",
-			"status":  "200",
-			"data":    productResponse,
-		})
+
+	productResponse := gin.H{
+		"skip":         pageIndex,
+		"take":         pageSize,
+		"totalRecords": totalRecord,
+		"products":     productList,
 	}
 
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Success",
+		"msg_key": "_SUCCESS_",
+		"status":  "200",
+		"data":    productResponse,
+	})
 }

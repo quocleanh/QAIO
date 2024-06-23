@@ -12,6 +12,7 @@ type ProductRepository struct {
 	DB *sql.DB
 }
 
+// The NewProductRepository function creates a new ProductRepository and initializes the DB field with the provided database connection
 func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{
 		DB: db,

@@ -48,36 +48,35 @@ func main() {
 	handlers.InitUsersCollection(client)
 	handlers.InitProductsCollection(client)
 
-	// Kết nối tới SQL Server
+	//////////// Kết nối tới SQL Server
+	isProduction := os.Getenv("ENV") == "production"
+	if isProduction {
+		db, err := utils.ConnectSQLServer(os.Getenv("SQL_SERVER_URI"))
+		if err != nil {
+			log.Fatal("Cannot connect to database:", err)
 
-	db, err := utils.ConnectSQLServer(os.Getenv("SQL_SERVER_URI"))
-	if err != nil {
-		log.Fatal("Cannot connect to database:", err)
+		}
+		defer db.Close()
 
+		log.Println("Connected to database successfully")
+
+		// Kiểm tra kết nối SQL Server
+		err = db.Ping()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Tạo ProductRepository và ProductHandler
+		productRepo := repositories.NewProductRepository(db)
+
+		// Khởi động worker để đồng bộ sản phẩm
+		log.Println("Environment is development")
+		productWorker := worker.ProductWorker(productRepo, client)
+		go productWorker.Run()
 	}
-	defer db.Close()
-
-	log.Println("Connected to database successfully")
-
-	// Kiểm tra kết nối SQL Server
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Tạo ProductRepository và ProductHandler
-	productRepo := repositories.NewProductRepository(db)
-	productHandler := handlers.NewProductHandler(productRepo)
-
-	// Khởi động worker để đồng bộ sản phẩm
-
-	log.Println("Environment is development")
-	productWorker := worker.ProductWorker(productRepo, client)
-	go productWorker.Run()
-
 	// Cấu hình router
 	router := gin.Default()
-	routes.RegisterRoutes(router, productHandler)
+	routes.RegisterRoutes(router)
 
 	// Cấu hình và chạy server
 	srv := &http.Server{

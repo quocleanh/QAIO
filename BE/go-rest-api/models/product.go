@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// cấu trúc dữ liệu của sản phẩm chuẩn
 type Product struct {
 	No                     string    `json:"no"`
 	Name                   string    `json:"name"`
@@ -37,6 +38,26 @@ type Product struct {
 	UpdatedAt              time.Time `json:"updated_at"`
 }
 
+// cấu trúc dữ liệu của giá bán
+type SalesPrice struct {
+	ProductNo string  `json:"product_no"`
+	Price     float64 `json:"price"`
+	FromDate  string  `json:"from_date"`
+	ToDate    string  `json:"to_date"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// cấu trúc dữ liệu của thông tin sản phẩm
+// bao gồm thông tin sản phẩm, hình ảnh và giá bán
+// dùng để trả về cho API
+type ProductInfomation struct {
+	Product
+	Imags      []string     `json:"images"`
+	SalesPrice []SalesPrice `json:"sales_price"`
+}
+
+// cấu trúc dữ liệu của sản phẩm trong SQL Server
 type Product_SQL struct {
 	Product
 	TotalRecords int `json:"total_records"`
